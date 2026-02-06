@@ -1,0 +1,3 @@
+[submodule "axil-timer"]
+	path = deps/axil-timer
+	url = https://github.com/mij001/axil-timer.git
