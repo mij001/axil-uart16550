@@ -3,8 +3,14 @@
 # git submodule update --init
 # targets are listed in the readme
 
-DEP := deps/axil-timer
-SIMDIR := sim
+DEP     := deps/axil-timer
+SIMDIR  := sim
+SEED    ?= 1
+NRAND   ?= 4000
+
+RTL := $(DEP)/rtl/common/axil_reg_bus.v rtl/sync_fifo.v rtl/uart/uart_baud.v \
+       rtl/uart/uart_tx.v rtl/uart/uart_rx.v rtl/uart/uart_io.v \
+       rtl/uart/uart_regs.v rtl/uart/axil_uart16550.v
 
 check-dep:
 	@test -d $(DEP)/rtl || \
@@ -13,7 +19,10 @@ check-dep:
 $(SIMDIR):
 	@mkdir -p $(SIMDIR)
 
+lint: check-dep
+	verilator --lint-only -Wall --top-module axil_uart16550 $(RTL)
+
 clean:
 	rm -rf $(SIMDIR)
 
-.PHONY: check-dep clean
+.PHONY: check-dep lint clean
