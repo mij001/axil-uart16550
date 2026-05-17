@@ -14,6 +14,8 @@ RTL := $(DEP)/rtl/common/axil_reg_bus.v rtl/sync_fifo.v rtl/uart/uart_baud.v \
 TB  := $(DEP)/tb/common/axil_checker.v tb/axil_master_bfm.v tb/uart/serial_bfm.v \
        tb/uart/uart16550_model.v tb/uart/tb_axil_uart16550.v
 
+SCENARIOS := tx_start tx_frame rx_frame rx_glitch fifo_overrun cti
+
 all: lint run
 
 check-dep:
@@ -40,7 +42,12 @@ regress: check-dep $(SIMDIR)/tb_axil_uart16550.vvp
 	  xargs -P 4 -I{} sh -c 'vvp $(SIMDIR)/tb_axil_uart16550.vvp +seed={} +nrand=$(NRAND) > $(SIMDIR)/uart_seed{}.log; \
 	                         grep "^RESULT" $(SIMDIR)/uart_seed{}.log | sed "s/^/seed {}: /"'
 
+waves: $(SIMDIR)/tb_axil_uart16550.vvp
+	@for sc in $(SCENARIOS); do \
+	  vvp $(SIMDIR)/tb_axil_uart16550.vvp +scenario=$$sc | grep WAVE_START | sed "s/^/$$sc /"; \
+	done
+
 clean:
 	rm -rf $(SIMDIR)
 
-.PHONY: all check-dep lint run nomodel regress clean
+.PHONY: all check-dep lint run nomodel regress waves clean
