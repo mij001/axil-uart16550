@@ -4,22 +4,22 @@
 // no divided clock, tick is an enable. divisor 0 stops it
 
 module uart_baud (
-    input  wire        clk,
-    input  wire        rstn,
+    input  logic        clk,
+    input  logic        rstn,
 
-    input  wire [15:0] divisor,      // DLM:DLL as stored now
-    input  wire        load,         // DLL or DLM is written this cycle
-    input  wire [15:0] load_value,   // the divisor after that write
+    input  logic [15:0] divisor,      // DLM:DLL as stored now
+    input  logic        load,         // DLL or DLM is written this cycle
+    input  logic [15:0] load_value,   // the divisor after that write
 
-    output reg         tick
+    output logic         tick
 );
 
-    reg [15:0] cnt_q,  cnt_d;
-    reg        tick_q, tick_d;
-    reg        run;                  // the generator runs next cycle
+    logic [15:0] cnt_q,  cnt_d;
+    logic tick_q, tick_d;
+    logic run;                  // the generator runs next cycle
 
     //  ------------------------------------------------------------------------- Block
-    always @(posedge clk or negedge rstn) begin
+    always_ff @(posedge clk or negedge rstn) begin
         if (!rstn) begin
             cnt_q  <= 16'd0;
             tick_q <= 1'b0;
@@ -30,7 +30,7 @@ module uart_baud (
     end
 
     //  ------------------------------------------------------------------------- Block
-    always @(*) begin
+    always_comb begin
         if (load) begin
             run   = (load_value != 16'd0);
             cnt_d = run ? load_value - 16'd1 : 16'd0;
@@ -48,7 +48,7 @@ module uart_baud (
     end
 
     //  ------------------------------------------------------------------------- Block
-    always @(*) begin
+    always_comb begin
         tick = tick_q;
     end
 

@@ -4,48 +4,48 @@
 // a flop on every output
 
 module uart_io (
-    input  wire       clk,
-    input  wire       rstn,
+    input  logic       clk,
+    input  logic       rstn,
 
     // pins in, asynchronous to clk
-    input  wire       sin,
-    input  wire       cts_n,
-    input  wire       dsr_n,
-    input  wire       ri_n,
-    input  wire       dcd_n,
+    input  logic       sin,
+    input  logic       cts_n,
+    input  logic       dsr_n,
+    input  logic       ri_n,
+    input  logic       dcd_n,
 
     // from the core
-    input  wire       tx_ser,       // transmitter output
-    input  wire       brk,          // LCR bit 6
-    input  wire [4:0] mcr,          // MCR bits 4:0 {LOOP, OUT2, OUT1, RTS, DTR}
+    input  logic       tx_ser,       // transmitter output
+    input  logic       brk,          // LCR bit 6
+    input  logic [4:0] mcr,          // MCR bits 4:0 {LOOP, OUT2, OUT1, RTS, DTR}
 
     // pins out
-    output reg        sout,
-    output reg        dtr_n,
-    output reg        rts_n,
-    output reg        out1_n,
-    output reg        out2_n,
+    output logic        sout,
+    output logic        dtr_n,
+    output logic        rts_n,
+    output logic        out1_n,
+    output logic        out2_n,
 
     // to the core
-    output reg        rxd,          // what the receiver samples
-    output reg  [3:0] msr_now       // MSR bits 7:4 as {DCD, RI, DSR, CTS}
+    output logic        rxd,          // what the receiver samples
+    output logic  [3:0] msr_now       // MSR bits 7:4 as {DCD, RI, DSR, CTS}
 );
 
-    reg       sin_s1_q, sin_s1_d;
-    reg       sin_s2_q, sin_s2_d;
-    reg [3:0] mdm_s1_q, mdm_s1_d;   // {dcd_n, ri_n, dsr_n, cts_n}
-    reg [3:0] mdm_s2_q, mdm_s2_d;
-    reg       rxd_q,    rxd_d;
-    reg [3:0] msr_q,    msr_d;
-    reg       sout_q,   sout_d;
-    reg [3:0] mctl_q,   mctl_d;     // {out2_n, out1_n, rts_n, dtr_n}
+    logic sin_s1_q, sin_s1_d;
+    logic sin_s2_q, sin_s2_d;
+    logic [3:0] mdm_s1_q, mdm_s1_d;   // {dcd_n, ri_n, dsr_n, cts_n}
+    logic [3:0] mdm_s2_q, mdm_s2_d;
+    logic rxd_q,    rxd_d;
+    logic [3:0] msr_q,    msr_d;
+    logic sout_q,   sout_d;
+    logic [3:0] mctl_q,   mctl_d;     // {out2_n, out1_n, rts_n, dtr_n}
 
     // named "now" helpers
-    wire loop = mcr[4];
-    wire line = tx_ser & ~brk;      // the transmitted line level, with break
+    logic loop = mcr[4];
+    logic line = tx_ser & ~brk;      // the transmitted line level, with break
 
     //  ------------------------------------------------------------------------- Block
-    always @(posedge clk or negedge rstn) begin
+    always_ff @(posedge clk or negedge rstn) begin
         if (!rstn) begin
             sin_s1_q <= 1'b1;
             sin_s2_q <= 1'b1;
@@ -68,7 +68,7 @@ module uart_io (
     end
 
     //  ------------------------------------------------------------------------- Block
-    always @(*) begin
+    always_comb begin
         sin_s1_d = sin;
         sin_s2_d = sin_s1_q;
         mdm_s1_d = {dcd_n, ri_n, dsr_n, cts_n};
@@ -81,7 +81,7 @@ module uart_io (
     end
 
     //  ------------------------------------------------------------------------- Block
-    always @(*) begin
+    always_comb begin
         sout    = sout_q;
         dtr_n   = mctl_q[0];
         rts_n   = mctl_q[1];

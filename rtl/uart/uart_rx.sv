@@ -4,23 +4,23 @@
 // as a glitch if the line came back up. bits sampled every 16 ticks after
 
 module uart_rx (
-    input  wire       clk,
-    input  wire       rstn,
+    input  logic       clk,
+    input  logic       rstn,
 
-    input  wire       tick,
-    input  wire       rxd,
+    input  logic       tick,
+    input  logic       rxd,
 
     // LCR fields, as stored now
-    input  wire [1:0] wls,
-    input  wire       pen,
-    input  wire       eps,
-    input  wire       stick,
+    input  logic [1:0] wls,
+    input  logic       pen,
+    input  logic       eps,
+    input  logic       stick,
 
-    output reg        valid,
-    output reg  [7:0] data,
-    output reg        pe,
-    output reg        fe,
-    output reg        bi
+    output logic        valid,
+    output logic  [7:0] data,
+    output logic        pe,
+    output logic        fe,
+    output logic        bi
 );
 
     localparam [2:0] ST_IDLE  = 3'd0;
@@ -31,32 +31,32 @@ module uart_rx (
     localparam [2:0] ST_BRK   = 3'd5;
 
     // control
-    reg [2:0] state_q, state_d;
+    logic [2:0] state_q, state_d;
     // datapath
-    reg [3:0] sub_q,   sub_d;
-    reg [2:0] bitn_q,  bitn_d;
-    reg [7:0] shreg_q, shreg_d;
-    reg       par_q,   par_d;
-    reg       zero_q,  zero_d;
-    reg [2:0] last_q,  last_d;
-    reg       pen_q,   pen_d;
-    reg       eps_q,   eps_d;
-    reg       stick_q, stick_d;
+    logic [3:0] sub_q,   sub_d;
+    logic [2:0] bitn_q,  bitn_d;
+    logic [7:0] shreg_q, shreg_d;
+    logic par_q,   par_d;
+    logic zero_q,  zero_d;
+    logic [2:0] last_q,  last_d;
+    logic pen_q,   pen_d;
+    logic eps_q,   eps_d;
+    logic stick_q, stick_d;
     // output character
-    reg       valid_q, valid_d;
-    reg [7:0] data_q,  data_d;
-    reg       pe_q,    pe_d;
-    reg       fe_q,    fe_d;
-    reg       bi_q,    bi_d;
+    logic valid_q, valid_d;
+    logic [7:0] data_q,  data_d;
+    logic pe_q,    pe_d;
+    logic fe_q,    fe_d;
+    logic bi_q,    bi_d;
 
     // named "now" helpers
-    wire at_mid   = (sub_q == 4'd7);
-    wire at_end   = (sub_q == 4'd15);
-    wire par_exp  = stick_q ? ~eps_q : (eps_q ? ^shreg_q : ~^shreg_q);
-    wire par_bad  = pen_q & (par_q != par_exp);
+    logic at_mid   = (sub_q == 4'd7);
+    logic at_end   = (sub_q == 4'd15);
+    logic par_exp  = stick_q ? ~eps_q : (eps_q ? ^shreg_q : ~^shreg_q);
+    logic par_bad  = pen_q & (par_q != par_exp);
 
     //  ------------------------------------------------------------------------- Block
-    always @(posedge clk or negedge rstn) begin
+    always_ff @(posedge clk or negedge rstn) begin
         if (!rstn) begin
             state_q <= ST_IDLE;
             sub_q   <= 4'd0;
@@ -93,7 +93,7 @@ module uart_rx (
     end
 
     //  ------------------------------------------------------------------------- Block
-    always @(*) begin
+    always_comb begin
         state_d = state_q;
         sub_d   = sub_q;
         bitn_d  = bitn_q;
@@ -216,7 +216,7 @@ module uart_rx (
     end
 
     //  ------------------------------------------------------------------------- Block
-    always @(*) begin
+    always_comb begin
         valid = valid_q;
         data  = data_q;
         pe    = pe_q;

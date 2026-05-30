@@ -4,85 +4,85 @@
 // scope docs/uart16550_scope.md, decisions docs/uart16550_decisions.md
 
 module axil_uart16550 #(
-    parameter integer ADDR_W = 12
+    parameter int ADDR_W = 12
 ) (
-    input  wire              aclk,
-    input  wire              aresetn,
+    input  logic              aclk,
+    input  logic              aresetn,
 
-    input  wire              s_axil_awvalid,
-    output wire              s_axil_awready,
-    input  wire [ADDR_W-1:0] s_axil_awaddr,
+    input  logic              s_axil_awvalid,
+    output logic              s_axil_awready,
+    input  logic [ADDR_W-1:0] s_axil_awaddr,
     /* verilator lint_off UNUSEDSIGNAL */
-    input  wire [2:0]        s_axil_awprot,   // not used: no privilege checks
+    input  logic [2:0]        s_axil_awprot,   // not used: no privilege checks
     /* verilator lint_on UNUSEDSIGNAL */
 
-    input  wire              s_axil_wvalid,
-    output wire              s_axil_wready,
-    input  wire [31:0]       s_axil_wdata,
-    input  wire [3:0]        s_axil_wstrb,
+    input  logic              s_axil_wvalid,
+    output logic              s_axil_wready,
+    input  logic [31:0]       s_axil_wdata,
+    input  logic [3:0]        s_axil_wstrb,
 
-    output wire              s_axil_bvalid,
-    input  wire              s_axil_bready,
-    output wire [1:0]        s_axil_bresp,
+    output logic              s_axil_bvalid,
+    input  logic              s_axil_bready,
+    output logic [1:0]        s_axil_bresp,
 
-    input  wire              s_axil_arvalid,
-    output wire              s_axil_arready,
-    input  wire [ADDR_W-1:0] s_axil_araddr,
+    input  logic              s_axil_arvalid,
+    output logic              s_axil_arready,
+    input  logic [ADDR_W-1:0] s_axil_araddr,
     /* verilator lint_off UNUSEDSIGNAL */
-    input  wire [2:0]        s_axil_arprot,   // not used: no privilege checks
+    input  logic [2:0]        s_axil_arprot,   // not used: no privilege checks
     /* verilator lint_on UNUSEDSIGNAL */
 
-    output wire              s_axil_rvalid,
-    input  wire              s_axil_rready,
-    output wire [31:0]       s_axil_rdata,
-    output wire [1:0]        s_axil_rresp,
+    output logic              s_axil_rvalid,
+    input  logic              s_axil_rready,
+    output logic [31:0]       s_axil_rdata,
+    output logic [1:0]        s_axil_rresp,
 
-    input  wire              sin,
-    output wire              sout,
-    input  wire              cts_n,
-    input  wire              dsr_n,
-    input  wire              ri_n,
-    input  wire              dcd_n,
-    output wire              dtr_n,
-    output wire              rts_n,
-    output wire              out1_n,
-    output wire              out2_n,
+    input  logic              sin,
+    output logic              sout,
+    input  logic              cts_n,
+    input  logic              dsr_n,
+    input  logic              ri_n,
+    input  logic              dcd_n,
+    output logic              dtr_n,
+    output logic              rts_n,
+    output logic              out1_n,
+    output logic              out2_n,
 
-    output wire              irq
+    output logic              irq
 );
 
     // register bus
-    wire              reg_wr;
-    wire [ADDR_W-1:0] reg_waddr;
+    logic reg_wr;
+    logic [ADDR_W-1:0] reg_waddr;
     /* verilator lint_off UNUSEDSIGNAL */
-    wire [31:0]       reg_wdata;      // registers are 8 bits, bits 31:8 ignored
-    wire [3:0]        reg_wstrb;      // only byte 0 exists
+    logic [31:0]       reg_wdata;      // registers are 8 bits, bits 31:8 ignored
+    logic [3:0]        reg_wstrb;      // only byte 0 exists
     /* verilator lint_on UNUSEDSIGNAL */
-    wire              reg_werr;
-    wire              reg_rd;
-    wire [ADDR_W-1:0] reg_raddr;
-    wire [7:0]        reg_rdata8;
-    wire              reg_rerr;
+    logic reg_werr;
+    logic reg_rd;
+    logic [ADDR_W-1:0] reg_raddr;
+    logic [7:0]        reg_rdata8;
+    logic reg_rerr;
 
     // FIFOs
-    wire              rxf_push, rxf_pop, rxf_clear;
-    wire [10:0]       rxf_din, rxf_dout;
-    wire [4:0]        rxf_count;
-    wire              txf_push, txf_pop, txf_clear;
-    wire [7:0]        txf_din, txf_dout;
-    wire [4:0]        txf_count;
+    logic rxf_push, rxf_pop, rxf_clear;
+    logic [10:0]       rxf_din, rxf_dout;
+    logic [4:0]        rxf_count;
+    logic txf_push, txf_pop, txf_clear;
+    logic [7:0]        txf_din, txf_dout;
+    logic [4:0]        txf_count;
 
     // core
-    wire              tick;
-    wire [15:0]       divisor, div_value;
-    wire              div_load;
-    wire [6:0]        lcr;            // LCR 6:0 (format and break)
-    wire [4:0]        mcr;
-    wire [3:0]        msr_now;
-    wire              tx_pop, tx_busy, tx_ser;
-    wire              rxd;
-    wire              rx_valid, rx_pe, rx_fe, rx_bi;
-    wire [7:0]        rx_data;
+    logic tick;
+    logic [15:0]       divisor, div_value;
+    logic div_load;
+    logic [6:0]        lcr;            // LCR 6:0 (format and break)
+    logic [4:0]        mcr;
+    logic [3:0]        msr_now;
+    logic tx_pop, tx_busy, tx_ser;
+    logic rxd;
+    logic rx_valid, rx_pe, rx_fe, rx_bi;
+    logic [7:0]        rx_data;
 
     axil_reg_bus #(.ADDR_W(ADDR_W)) u_bus (
         .aclk           (aclk),
