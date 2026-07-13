@@ -32,10 +32,12 @@ module sync_fifo #(
     logic [ADDR_W-1:0] mem_waddr;
 
     // named "now" helpers
-    logic do_pop  = pop  & (count_q != {(ADDR_W+1){1'b0}});
-    logic do_push = push & ((count_q != FULL) | do_pop);
+    logic do_pop;
+    assign do_pop = pop  & (count_q != {(ADDR_W+1){1'b0}});
+    logic do_push;
+    assign do_push = push & ((count_q != FULL) | do_pop);
 
-    //  ------------------------------------------------------------------------- Block
+    // b1
     always_ff @(posedge clk or negedge rstn) begin
         if (!rstn) begin
             wr_ptr_q <= {ADDR_W{1'b0}};
@@ -51,7 +53,7 @@ module sync_fifo #(
         end
     end
 
-    //  ------------------------------------------------------------------------- Block
+    // b2
     always_comb begin
         wr_ptr_d  = wr_ptr_q;
         rd_ptr_d  = rd_ptr_q;
@@ -85,12 +87,12 @@ module sync_fifo #(
         end
     end
 
-    //  ------------------------------------------------------------------------- Block
+    // b3
     always_comb begin
         count = count_q;
     end
 
-    //  the head is a lookup into storage at a registered index. it is written as a
+    // the head is a lookup into storage at a registered index
     assign dout = mem[rd_ptr_q];
 
 endmodule

@@ -50,12 +50,16 @@ module uart_rx (
     logic bi_q,    bi_d;
 
     // named "now" helpers
-    logic at_mid   = (sub_q == 4'd7);
-    logic at_end   = (sub_q == 4'd15);
-    logic par_exp  = stick_q ? ~eps_q : (eps_q ? ^shreg_q : ~^shreg_q);
-    logic par_bad  = pen_q & (par_q != par_exp);
+    logic at_mid;
+    assign at_mid = (sub_q == 4'd7);
+    logic at_end;
+    assign at_end = (sub_q == 4'd15);
+    logic par_exp;
+    assign par_exp = stick_q ? ~eps_q : (eps_q ? ^shreg_q : ~^shreg_q);
+    logic par_bad;
+    assign par_bad = pen_q & (par_q != par_exp);
 
-    //  ------------------------------------------------------------------------- Block
+    // b1
     always_ff @(posedge clk or negedge rstn) begin
         if (!rstn) begin
             state_q <= ST_IDLE;
@@ -92,7 +96,7 @@ module uart_rx (
         end
     end
 
-    //  ------------------------------------------------------------------------- Block
+    // b2
     always_comb begin
         state_d = state_q;
         sub_d   = sub_q;
@@ -183,7 +187,7 @@ module uart_rx (
                             bi_d    = 1'b1;
                             state_d = ST_BRK;
                         end else begin
-                            //  framing error; this sample is the centre of the next
+                            // framing error; this sample is the centre of the next
                             fe_d    = 1'b1;
                             bi_d    = 1'b0;
                             state_d = ST_DATA;
@@ -215,7 +219,7 @@ module uart_rx (
         end
     end
 
-    //  ------------------------------------------------------------------------- Block
+    // b3
     always_comb begin
         valid = valid_q;
         data  = data_q;

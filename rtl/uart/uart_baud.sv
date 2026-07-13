@@ -18,7 +18,7 @@ module uart_baud (
     logic tick_q, tick_d;
     logic run;                  // the generator runs next cycle
 
-    //  ------------------------------------------------------------------------- Block
+    // b1
     always_ff @(posedge clk or negedge rstn) begin
         if (!rstn) begin
             cnt_q  <= 16'd0;
@@ -29,7 +29,7 @@ module uart_baud (
         end
     end
 
-    //  ------------------------------------------------------------------------- Block
+    // b2
     always_comb begin
         if (load) begin
             run   = (load_value != 16'd0);
@@ -47,7 +47,7 @@ module uart_baud (
         tick_d = run & (cnt_d == 16'd0);
     end
 
-    //  ------------------------------------------------------------------------- Block
+    // b3
     always_comb begin
         tick = tick_q;
     end

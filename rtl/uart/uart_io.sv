@@ -41,10 +41,12 @@ module uart_io (
     logic [3:0] mctl_q,   mctl_d;     // {out2_n, out1_n, rts_n, dtr_n}
 
     // named "now" helpers
-    logic loop = mcr[4];
-    logic line = tx_ser & ~brk;      // the transmitted line level, with break
+    logic loop;
+    assign loop = mcr[4];
+    logic line;
+    assign line = tx_ser & ~brk;      // the transmitted line level, with break
 
-    //  ------------------------------------------------------------------------- Block
+    // b1
     always_ff @(posedge clk or negedge rstn) begin
         if (!rstn) begin
             sin_s1_q <= 1'b1;
@@ -67,7 +69,7 @@ module uart_io (
         end
     end
 
-    //  ------------------------------------------------------------------------- Block
+    // b2
     always_comb begin
         sin_s1_d = sin;
         sin_s2_d = sin_s1_q;
@@ -80,7 +82,7 @@ module uart_io (
         mctl_d   = loop ? 4'hF : ~mcr[3:0];
     end
 
-    //  ------------------------------------------------------------------------- Block
+    // b3
     always_comb begin
         sout    = sout_q;
         dtr_n   = mctl_q[0];

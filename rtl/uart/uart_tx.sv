@@ -44,20 +44,28 @@ module uart_tx (
     logic txd_q,       txd_d;
 
     // named "now" helpers, for taking a new character
-    logic [7:0] mask      = (wls == 2'd0) ? 8'h1F :
+    logic [7:0] mask;
+    assign mask = (wls == 2'd0) ? 8'h1F :
                            (wls == 2'd1) ? 8'h3F :
                            (wls == 2'd2) ? 8'h7F : 8'hFF;
-    logic [7:0] masked    = fifo_data & mask;
-    logic par_calc  = stick ? ~eps : (eps ? ^masked : ~^masked);
-    logic [4:0] stop_calc = !stb ? 5'd15 : (wls == 2'd0) ? 5'd23 : 5'd31;
+    logic [7:0] masked;
+    assign masked = fifo_data & mask;
+    logic par_calc;
+    assign par_calc = stick ? ~eps : (eps ? ^masked : ~^masked);
+    logic [4:0] stop_calc;
+    assign stop_calc = !stb ? 5'd15 : (wls == 2'd0) ? 5'd23 : 5'd31;
 
-    logic end_bit   = (sub_q == 5'd15);
-    logic end_stop  = (sub_q == stop_last_q);
-    logic have_char = (fifo_count != 5'd0);
-    logic can_take  = tick & have_char &
+    logic end_bit;
+    assign end_bit = (sub_q == 5'd15);
+    logic end_stop;
+    assign end_stop = (sub_q == stop_last_q);
+    logic have_char;
+    assign have_char = (fifo_count != 5'd0);
+    logic can_take;
+    assign can_take = tick & have_char &
                            ((state_q == ST_IDLE) | ((state_q == ST_STOP) & end_stop));
 
-    //  ------------------------------------------------------------------------- Block
+    // b1
     always_ff @(posedge clk or negedge rstn) begin
         if (!rstn) begin
             state_q     <= ST_IDLE;
@@ -82,7 +90,7 @@ module uart_tx (
         end
     end
 
-    //  ------------------------------------------------------------------------- Block
+    // b2
     always_comb begin
         state_d     = state_q;
         sub_d       = sub_q;
@@ -166,7 +174,7 @@ module uart_tx (
         endcase
     end
 
-    //  ------------------------------------------------------------------------- Block
+    // b3
     always_comb begin
         txd  = txd_q;
         busy = (state_q != ST_IDLE);

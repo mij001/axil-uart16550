@@ -76,7 +76,7 @@ module uart_regs #(
     localparam [3:0] ID_THRI = 4'h2;   // transmitter holding register empty
     localparam [3:0] ID_MSI  = 4'h0;   // modem status
 
-    //  -------------------------------------------------------------------------
+    // registers. configuration first, then status, then interrupt state
     logic [3:0] ier_q,       ier_d;
     logic [7:0] lcr_q,       lcr_d;
     logic [4:0] mcr_q,       mcr_d;
@@ -102,88 +102,133 @@ module uart_regs #(
     logic to_pend_q,   to_pend_d;    // character timeout pending
     logic irq_q,       irq_d;
 
-    //  ------------------------------------------------------------------------- Named
-    logic dlab       = lcr_q[7];
+    // named "now" helpers. plain gates
+    logic dlab;
+    assign dlab = lcr_q[7];
 
     // writes that select byte 0, decoded by address
-    logic wr_ok      = reg_wr & reg_wstrb0;
-    logic thr_write  = wr_ok & (reg_waddr == A_DATA) & ~dlab;
-    logic dll_write  = wr_ok & (reg_waddr == A_DATA) &  dlab;
-    logic ier_write  = wr_ok & (reg_waddr == A_IER)  & ~dlab;
-    logic dlm_write  = wr_ok & (reg_waddr == A_IER)  &  dlab;
-    logic fcr_write  = wr_ok & (reg_waddr == A_IIR);
-    logic lcr_write  = wr_ok & (reg_waddr == A_LCR);
-    logic mcr_write  = wr_ok & (reg_waddr == A_MCR);
-    logic scr_write  = wr_ok & (reg_waddr == A_SCR);
+    logic wr_ok;
+    assign wr_ok = reg_wr & reg_wstrb0;
+    logic thr_write;
+    assign thr_write = wr_ok & (reg_waddr == A_DATA) & ~dlab;
+    logic dll_write;
+    assign dll_write = wr_ok & (reg_waddr == A_DATA) &  dlab;
+    logic ier_write;
+    assign ier_write = wr_ok & (reg_waddr == A_IER)  & ~dlab;
+    logic dlm_write;
+    assign dlm_write = wr_ok & (reg_waddr == A_IER)  &  dlab;
+    logic fcr_write;
+    assign fcr_write = wr_ok & (reg_waddr == A_IIR);
+    logic lcr_write;
+    assign lcr_write = wr_ok & (reg_waddr == A_LCR);
+    logic mcr_write;
+    assign mcr_write = wr_ok & (reg_waddr == A_MCR);
+    logic scr_write;
+    assign scr_write = wr_ok & (reg_waddr == A_SCR);
 
-    //  reads with side effects. reg_rd is only high for an accepted read, and these
-    logic rbr_read   = reg_rd & (reg_raddr == A_DATA) & ~dlab;
-    logic iir_read   = reg_rd & (reg_raddr == A_IIR);
-    logic lsr_read   = reg_rd & (reg_raddr == A_LSR);
-    logic msr_read   = reg_rd & (reg_raddr == A_MSR);
+    // reads with side effects. reg_rd is only high for an accepted read, and these
+    logic rbr_read;
+    assign rbr_read = reg_rd & (reg_raddr == A_DATA) & ~dlab;
+    logic iir_read;
+    assign iir_read = reg_rd & (reg_raddr == A_IIR);
+    logic lsr_read;
+    assign lsr_read = reg_rd & (reg_raddr == A_LSR);
+    logic msr_read;
+    assign msr_read = reg_rd & (reg_raddr == A_MSR);
 
     // FIFO state
-    logic rx_empty   = (rxf_count == 5'd0);
-    logic tx_empty   = (txf_count == 5'd0);
-    logic rx_full    = fen_q ? (rxf_count == 5'd16) : ~rx_empty;
-    logic tx_full    = fen_q ? (txf_count == 5'd16) : ~tx_empty;
-    logic cpu_pop    = rbr_read & ~rx_empty;
-    logic rx_err     = rx_bi | rx_fe | rx_pe;
-    logic head_err   = rxf_dout[10] | rxf_dout[9] | rxf_dout[8];
+    logic rx_empty;
+    assign rx_empty = (rxf_count == 5'd0);
+    logic tx_empty;
+    assign tx_empty = (txf_count == 5'd0);
+    logic rx_full;
+    assign rx_full = fen_q ? (rxf_count == 5'd16) : ~rx_empty;
+    logic tx_full;
+    assign tx_full = fen_q ? (txf_count == 5'd16) : ~tx_empty;
+    logic cpu_pop;
+    assign cpu_pop = rbr_read & ~rx_empty;
+    logic rx_err;
+    assign rx_err = rx_bi | rx_fe | rx_pe;
+    logic head_err;
+    assign head_err = rxf_dout[10] | rxf_dout[9] | rxf_dout[8];
 
     // FIFO control writes
-    logic fen_change = fcr_write & (reg_wdata[0] != fen_q);
-    logic rx_reset   = fcr_write & (fen_change | (reg_wdata[0] & reg_wdata[1]));
-    logic tx_reset   = fcr_write & (fen_change | (reg_wdata[0] & reg_wdata[2]));
+    logic fen_change;
+    assign fen_change = fcr_write & (reg_wdata[0] != fen_q);
+    logic rx_reset;
+    assign rx_reset = fcr_write & (fen_change | (reg_wdata[0] & reg_wdata[1]));
+    logic tx_reset;
+    assign tx_reset = fcr_write & (fen_change | (reg_wdata[0] & reg_wdata[2]));
 
-    //  overrun: a character arrives, there is no room, and no read or reset makes room
-    logic overrun    = rx_valid & rx_full & ~cpu_pop & ~rx_reset;
+    // overrun: a character arrives, there is no room, and no read or reset makes room
+    logic overrun;
+    assign overrun = rx_valid & rx_full & ~cpu_pop & ~rx_reset;
 
     // trigger level, FCR7:6
-    logic [4:0] trig_level = (trig_q == 2'd0) ? 5'd1 :
+    logic [4:0] trig_level;
+    assign trig_level = (trig_q == 2'd0) ? 5'd1 :
                             (trig_q == 2'd1) ? 5'd4 :
                             (trig_q == 2'd2) ? 5'd8 : 5'd14;
 
     // interrupt sources and priority, Table 5
-    logic src_rls = ier_q[2] & (oe_q | pe_q | fe_q | bi_q);
-    logic src_rda = ier_q[0] & (fen_q ? (rxf_count >= trig_level) : ~rx_empty);
-    logic src_cti = ier_q[0] & fen_q & to_pend_q;
-    logic src_thr = ier_q[1] & thri_q;
-    logic src_msi = ier_q[3] & (delta_q != 4'h0);
+    logic src_rls;
+    assign src_rls = ier_q[2] & (oe_q | pe_q | fe_q | bi_q);
+    logic src_rda;
+    assign src_rda = ier_q[0] & (fen_q ? (rxf_count >= trig_level) : ~rx_empty);
+    logic src_cti;
+    assign src_cti = ier_q[0] & fen_q & to_pend_q;
+    logic src_thr;
+    assign src_thr = ier_q[1] & thri_q;
+    logic src_msi;
+    assign src_msi = ier_q[3] & (delta_q != 4'h0);
 
-    logic [3:0] iir_id = src_rls ? ID_RLS  :
+    logic [3:0] iir_id;
+    assign iir_id = src_rls ? ID_RLS  :
                         src_rda ? ID_RDA  :
                         src_cti ? ID_CTI  :
                         src_thr ? ID_THRI :
                         src_msi ? ID_MSI  : ID_NONE;
 
     // THRE interrupt set and clear conditions
-    logic thre_rise  = tx_empty & ~thre_prev_q;
-    logic etbei_rise = ier_write & reg_wdata[1] & ~ier_q[1] & tx_empty;
-    logic thri_set   = thre_rise | etbei_rise | fen_change;
-    logic thri_clr   = thr_write | (iir_read & (iir_id == ID_THRI));
+    logic thre_rise;
+    assign thre_rise = tx_empty & ~thre_prev_q;
+    logic etbei_rise;
+    assign etbei_rise = ier_write & reg_wdata[1] & ~ier_q[1] & tx_empty;
+    logic thri_set;
+    assign thri_set = thre_rise | etbei_rise | fen_change;
+    logic thri_clr;
+    assign thri_clr = thr_write | (iir_read & (iir_id == ID_THRI));
 
-    //  modem status changes {DDCD, TERI, DDSR, DCTS}: any change, except RI which only
-    logic [3:0] msr_edge = {msr_now[3] ^ msr_prev_q[3],
+    // modem status changes {DDCD, TERI, DDSR, DCTS}: any change, except RI which only
+    logic [3:0] msr_edge;
+    assign msr_edge = {msr_now[3] ^ msr_prev_q[3],
                            msr_prev_q[2] & ~msr_now[2],
                            msr_now[1] ^ msr_prev_q[1],
                            msr_now[0] ^ msr_prev_q[0]};
 
     // character time for the timeout: 16 x (start + data + parity) + stop ticks
-    logic [3:0] nbits      = 4'd6 + {2'b00, lcr_q[1:0]} + {3'b000, lcr_q[3]};
-    logic [5:0] stop_ticks = !lcr_q[2]            ? 6'd16 :
+    logic [3:0] nbits;
+    assign nbits = 4'd6 + {2'b00, lcr_q[1:0]} + {3'b000, lcr_q[3]};
+    logic [5:0] stop_ticks;
+    assign stop_ticks = !lcr_q[2]            ? 6'd16 :
                             (lcr_q[1:0] == 2'd0) ? 6'd24 : 6'd32;
-    logic [7:0] char_ticks = {nbits, 4'b0000} + {2'b00, stop_ticks};   // at most 192
-    logic [9:0] to_limit   = {char_ticks, 2'b00};                       // at most 768
+    logic [7:0] char_ticks;
+    assign char_ticks = {nbits, 4'b0000} + {2'b00, stop_ticks};   // at most 192
+    logic [9:0] to_limit;
+    assign to_limit = {char_ticks, 2'b00};                       // at most 768
 
     // register values as software sees them
-    logic lsr7_vis = fen_q & (lsr7_q | (errs_q != 5'd0));
-    logic [7:0] lsr_val  = {lsr7_vis, tx_empty & ~tx_busy, tx_empty,
+    logic lsr7_vis;
+    assign lsr7_vis = fen_q & (lsr7_q | (errs_q != 5'd0));
+    logic [7:0] lsr_val;
+    assign lsr_val = {lsr7_vis, tx_empty & ~tx_busy, tx_empty,
                            bi_q, fe_q, pe_q, oe_q, ~rx_empty};
-    logic [7:0] msr_val  = {msr_now, delta_q};
-    logic [7:0] iir_val  = {fen_q, fen_q, 2'b00, iir_id};
+    logic [7:0] msr_val;
+    assign msr_val = {msr_now, delta_q};
+    logic [7:0] iir_val;
+    assign iir_val = {fen_q, fen_q, 2'b00, iir_id};
 
-    //  ------------------------------------------------------------------------- Block
+    // b1
     always_ff @(posedge clk or negedge rstn) begin
         if (!rstn) begin
             ier_q       <= 4'h0;
@@ -234,7 +279,7 @@ module uart_regs #(
         end
     end
 
-    //  ------------------------------------------------------------------------- Block
+    // b2
     always_comb begin
         // ---- defaults: stored values hold, commands are off ------------------
         ier_d       = ier_q;
@@ -381,7 +426,7 @@ module uart_regs #(
         endcase
     end
 
-    //  ------------------------------------------------------------------------- Block
+    // b3
     always_comb begin
         divisor = {dlm_q, dll_q};
         lcr     = lcr_q[6:0];
