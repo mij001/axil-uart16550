@@ -8,11 +8,11 @@ SIMDIR  := sim
 SEED    ?= 1
 NRAND   ?= 4000
 
-RTL := $(DEP)/rtl/common/axil_reg_bus.v rtl/sync_fifo.v rtl/uart/uart_baud.v \
-       rtl/uart/uart_tx.v rtl/uart/uart_rx.v rtl/uart/uart_io.v \
-       rtl/uart/uart_regs.v rtl/uart/axil_uart16550.v
-TB  := $(DEP)/tb/common/axil_checker.v tb/axil_master_bfm.v tb/uart/serial_bfm.v \
-       tb/uart/uart16550_model.v tb/uart/tb_axil_uart16550.v
+RTL := $(DEP)/rtl/common/axil_reg_bus.sv rtl/sync_fifo.sv rtl/uart/uart_baud.sv \
+       rtl/uart/uart_tx.sv rtl/uart/uart_rx.sv rtl/uart/uart_io.sv \
+       rtl/uart/uart_regs.sv rtl/uart/axil_uart16550.sv
+TB  := $(DEP)/tb/common/axil_checker.sv tb/axil_master_bfm.sv tb/uart/serial_bfm.sv \
+       tb/uart/uart16550_model.sv tb/uart/tb_axil_uart16550.sv
 
 SCENARIOS := tx_start tx_frame rx_frame rx_glitch fifo_overrun cti
 
@@ -26,7 +26,7 @@ $(SIMDIR):
 	@mkdir -p $(SIMDIR)
 
 $(SIMDIR)/tb_axil_uart16550.vvp: $(RTL) $(TB) | $(SIMDIR)
-	iverilog -g2005 -o $@ $^
+	iverilog -g2012 -o $@ $^
 
 lint: check-dep
 	verilator --lint-only -Wall --top-module axil_uart16550 $(RTL)
