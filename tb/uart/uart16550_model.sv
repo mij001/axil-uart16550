@@ -22,7 +22,7 @@ module uart16550_model #(
     input wire              dcd_n
 );
 
-    //  ------------------------------------------------------------- state pins
+    // ------------------------------------------------------------- state pins
     reg        sin1, sin2, rxd;
     reg [3:0]  mdm1, mdm2;                   // {dcd_n, ri_n, dsr_n, cts_n}
     reg [3:0]  msr_hi;                       // MSR 7:4 {DCD, RI, DSR, CTS}

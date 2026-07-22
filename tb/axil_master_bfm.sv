@@ -93,7 +93,7 @@ module axil_master_bfm #(
         integer dly_aw, dly_w, dly_b;
         begin
             if (aclk !== 1'b0) begin
-                //  report, then recover: driving now could put VALID up and down
+                // report, then recover: driving now could put VALID up and down
                 $display("[%0t] BFM USE ERROR: write must start at a falling edge", $time);
                 usage_errors = usage_errors + 1;
                 @(negedge aclk);

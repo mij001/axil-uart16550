@@ -40,7 +40,7 @@ module serial_bfm (
         end
     endtask
 
-    //  send one frame. flags: bit 0 flip the parity bit (parity error) bit 1 make the
+    // send one frame. flags: bit 0 parity error, bit 1 framing error
     task send;
         input [7:0]   d;
         input integer wbits;
@@ -127,7 +127,7 @@ module serial_bfm (
         mq_head = 0; mq_tail = 0; mon_frames = 0; mon_width_errors = 0; last_start = 0;
     end
 
-    //  width of every low stretch on line_in, measured between changes. in a correct
+    // width of every low stretch on line_in, measured between changes. in a correct
     realtime last_change;
     reg      last_level;
     real     ratio;
@@ -171,7 +171,7 @@ module serial_bfm (
                     end
                     #(mon_bit_ns);
                     ok = line_in;                         // centre of the first stop bit
-                    //  and again a quarter bit before the stop bits must end, so a
+                    // again a quarter bit before the stop bits end
                     #((2 * mon_stop_halves - 3) * mon_bit_ns / 4);
                     ok = ok & line_in;
                     mq_start[mq_tail]  = t0;

@@ -11,8 +11,13 @@ module tb_axil_uart16550;
     localparam [1:0] OKAY = 2'b00, SLVERR = 2'b10;
 
     reg aclk    = 1'b0;
-    reg aresetn = 1'b0;
     always #5 aclk = ~aclk;
+
+    // reset starts HIGH then goes low, on purpose it used to start low. an async
+    reg aresetn = 1'b1;
+    initial begin
+        #1 aresetn = 1'b0;
+    end
 
     // ------------------------------------------------------------ wires
     wire              awvalid, awready, wvalid, wready, bvalid, bready;
@@ -91,7 +96,7 @@ module tb_axil_uart16550;
         end
     endfunction
 
-    //  ------------------------------------------------------------ bus scoreboard
+    // ------------------------------------------------------------ bus scoreboard
     reg [8:0]  exp_r   [0:255];
     reg [1:0]  exp_b   [0:255];
     reg [ADDR_W-1:0] aw_q [0:255];
@@ -143,7 +148,7 @@ module tb_axil_uart16550;
         end
     end
 
-    //  ------------------------------------------------------------ state compare
+    // ------------------------------------------------------------ state compare
     task mismatch;
         input [8*40-1:0] what;
         input [31:0]     got;
@@ -381,7 +386,7 @@ module tb_axil_uart16550;
         end
     endtask
 
-    //  send one frame on sin and return at a falling edge after the receiver has had
+    // send one frame on sin and return at a falling edge after the receiver has had
     task ser_send;
         input [7:0]   d;
         input integer wbits;
@@ -456,7 +461,7 @@ module tb_axil_uart16550;
             wr(R_IIR, 8'h00);
             rd(R_IIR, save);
             check(save[7:6] == 2'b00, "probe IIR 7:6 = 00 in 16450 mode");
-            //  THRE interrupt must appear when enabled on an idle transmitter, and
+            // THRE interrupt must appear when enabled on an idle transmitter
             wr(R_IER, 8'h02);
             rd(R_LSR, save);   check(save[6] == 1'b1, "probe TEMT on idle transmitter");
             rd(R_IIR, save);   check(save[3:0] == 4'h2, "probe THRE interrupt after enabling");
@@ -505,7 +510,7 @@ module tb_axil_uart16550;
                         u_ser.expect_frame(d, ok);  check(ok, "tx frame 1");
                         t_first = u_ser.last_start;
                         u_ser.expect_frame(~d, ok); check(ok, "tx frame 2");
-                        //  the second byte was already waiting, so its start bit must
+                        // the second byte was already waiting, so its start bit must
                         len2 = 2 * (1 + wb + (pm != 0)) + halves_for(wb, sb);
                         check(u_ser.last_start - t_first == len2 * 160 * cur_div / 2,
                               "back-to-back frames with no gap");
@@ -546,7 +551,7 @@ module tb_axil_uart16550;
             rd_expect(R_DATA, 8'h5A, "parity error: data kept");
             rd_expect(R_LSR, 8'hE0, "LSR7 stays until the LSR read after the bad byte left");
             rd_expect(R_LSR, 8'h60, "all error state cleared");
-            //  a frame with no stop bit, followed at once by a good frame: the good
+            // a frame with no stop bit, followed at once by a good frame: the good
             set_format(8, 0, 0);
             u_ser.send(8'h0F, 8, 0, 2, 160, 8);
             u_ser.send(8'hA5, 8, 0, 2, 160, 4);
@@ -607,7 +612,7 @@ module tb_axil_uart16550;
             rd_expect(R_LSR, 8'h63, "16450 overrun: DR and OE");
             rd_expect(R_DATA, 8'h22, "16450 overrun: newest character kept");
             rd_expect(R_LSR, 8'h60, "16450 overrun cleared");
-            //  transmit holding register replace: disable the baud generator so the
+            // THR replace: baud generator off so nothing drains
             set_divisor(0);
             wr(R_DATA, 8'h41);
             wr(R_DATA, 8'h42);
@@ -673,7 +678,7 @@ module tb_axil_uart16550;
             ser_send(8'h99, 8, 0, 0, 0);
             while (u_model.to_pend !== 1'b1 && cyc < last_rx_cyc + 2000) @(negedge aclk);
             t1 = cyc;
-            //  8N1 is 10 bits of 16 ticks; 4 character times is 640 ticks, one per
+            // 8N1 is 10 bits of 16 ticks; 4 character times is 640 ticks, one per
             check(t1 - last_rx_cyc == 641, "timeout exactly 4 character times after the character");
             rd_expect(R_IIR, 8'hCC, "character timeout indication");
             ser_send(8'h98, 8, 0, 0, 0);
@@ -930,7 +935,7 @@ module tb_axil_uart16550;
     endtask
 
 
-    //  land two events in exactly the same cycle, using the model to see them coming
+    // land two events in exactly the same cycle, using the model to see them coming
     task test_collisions;
         integer guard;
         begin
@@ -938,7 +943,7 @@ module tb_axil_uart16550;
             u_bfm.no_delays;
             set_format(8, 0, 0);
             wr(R_IIR, 8'h07);
-            //  (1) RX FIFO full, a character arrives, and the CPU reads RBR in the
+            // (1) RX FIFO full, a character arrives, CPU reads RBR that cycle
             for (i = 0; i < 16; i = i + 1) ser_send(8'h80 + i, 8, 0, 0, 0);
             fork
                 u_ser.send(8'hC0, 8, 0, 2, 160, 0);
@@ -956,7 +961,7 @@ module tb_axil_uart16550;
             check(v[1] == 1'b0, "read in the arrival cycle prevents overrun");
             for (i = 0; i < 16; i = i + 1) rd(R_DATA, v[7:0]);
             check(v[7:0] == 8'hC0, "arriving byte stored after the read made room");
-            //  (2) RX FIFO full, a character arrives, and the CPU reads LSR in the
+            // (2) RX FIFO full, a character arrives, CPU reads LSR that cycle
             for (i = 0; i < 16; i = i + 1) ser_send(8'h90 + i, 8, 0, 0, 0);
             fork
                 u_ser.send(8'hC1, 8, 0, 2, 160, 0);
@@ -984,7 +989,7 @@ module tb_axil_uart16550;
             dsr_n = 1'b1;
             wait_cycles(6);
             rd(R_MSR, v[7:0]);
-            //  (4) THR written in the cycle THRE rises: THRI set wins, so IIR still
+            // (4) THR written in the cycle THRE rises: THRI set wins, so IIR still
             set_divisor(4);
             wr(R_IER, 8'h00);
             wr(R_IER, 8'h02);
@@ -999,7 +1004,7 @@ module tb_axil_uart16550;
             check(v[3:0] == 4'h2, "THRE rise survived the colliding THR write");
             wr(R_IER, 8'h00);
             wait_tx_idle;
-            //  (5) a character with a parity error becomes the head of the RX FIFO in
+            // (5) a parity error character reaches the head of the RX FIFO
             set_divisor(1);
             set_format(8, 2, 0);
             fork
@@ -1136,7 +1141,7 @@ module tb_axil_uart16550;
         end
     endtask
 
-    // ------------------------------------------------------------ scenarios for
+    // ---------------------------------------------------------- scenarios
     task run_scenario;
         begin
             $sformat(vcdname, "sim/uart_%0s.vcd", scenario);
